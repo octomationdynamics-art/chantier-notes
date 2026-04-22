@@ -191,9 +191,9 @@ async function uploadToFolder(
   contentType: string,
 ): Promise<UploadResult> {
   const cleanType = cleanMime(contentType, 'application/octet-stream')
-  if (typeof data !== 'string') {
-    const existing = await findFileInFolder(folderId, filename)
-    if (existing) await authed(`${DRIVE}/files/${existing.id}`, { method: 'DELETE' }).catch(() => undefined)
+  const existing = await findFileInFolder(folderId, filename).catch(() => null)
+  if (existing) {
+    await authed(`${DRIVE}/files/${existing.id}`, { method: 'DELETE' }).catch(() => undefined)
   }
   const blob =
     typeof data === 'string'

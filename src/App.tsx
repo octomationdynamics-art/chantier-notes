@@ -225,16 +225,35 @@ export default function App() {
 
   const handleRename = useCallback(
     async (id: string, name: string) => {
-      const updated = await updateNote(id, { name })
-      if (!updated) return
-      setNotes((prev) => prev.map((n) => (n.id === id ? updated : n)))
-      if (updated.syncState === 'synced' || updated.syncState === 'error') {
+      const existing = await listNotes().then((arr) => arr.find((x) => x.id === id))
+      if (!existing) return
+      const oldName = existing.name
+      const renamed = await updateNote(id, { name })
+      if (!renamed) return
+      setNotes((prev) => prev.map((n) => (n.id === id ? renamed : n)))
+      const wasOnDrive = Boolean(existing.driveAudioUrl || existing.driveTranscriptUrl)
+      if (wasOnDrive && canSyncRemote()) {
+        try {
+          await deleteNoteFiles({
+            baseName: oldName,
+            chantier: existing.chantier,
+            photoCount: existing.photos.length,
+          })
+        } catch {
+          /* best effort */
+        }
         const resynced: Note = {
-          ...updated,
+          ...renamed,
           syncState: 'local',
           driveAudioUrl: undefined,
           driveTranscriptUrl: undefined,
           driveShareUrl: undefined,
+          photos: renamed.photos.map((p) => ({
+            ...p,
+            syncState: 'local' as const,
+            driveFileId: undefined,
+            driveUrl: undefined,
+          })),
         }
         await updateNoteLocal(resynced)
         await trySync(id)
@@ -296,8 +315,10 @@ export default function App() {
       const updated: Note = {
         ...existing,
         transcript,
-        syncState: existing.syncState === 'synced' ? 'local' : existing.syncState,
+        syncState: 'local',
+        driveAudioUrl: undefined,
         driveTranscriptUrl: undefined,
+        driveShareUrl: undefined,
       }
       await updateNoteLocal(updated)
       if (canSyncRemote()) await trySync(id)
@@ -431,7 +452,7 @@ export default function App() {
         </section>
       </main>
       <footer className="app-footer">
-        <small>v0.3.1 · Whisper local + Drive + photos</small>
+        <small>v0.3.2 · Whisper local + Drive + photos</small>
         <div style={{ marginTop: 8 }}>
           <Diagnostic />
         </div>
