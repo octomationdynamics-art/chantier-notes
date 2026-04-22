@@ -11,11 +11,26 @@ export interface UploadResult {
   webViewLink: string
 }
 
+async function fetchWithRetry(url: string, init: RequestInit, retries = 2): Promise<Response> {
+  let lastError: unknown = null
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      return await fetch(url, init)
+    } catch (e) {
+      lastError = e
+      if (attempt === retries) break
+      await new Promise((r) => setTimeout(r, 800 * (attempt + 1)))
+    }
+  }
+  const msg = lastError instanceof Error ? lastError.message : String(lastError)
+  throw new Error(`Réseau: ${msg} (URL: ${new URL(url).hostname})`)
+}
+
 async function authed(url: string, init: RequestInit = {}): Promise<Response> {
   const token = await getAccessToken()
   const headers = new Headers(init.headers)
   headers.set('Authorization', `Bearer ${token}`)
-  return fetch(url, { ...init, headers })
+  return fetchWithRetry(url, { ...init, headers })
 }
 
 function sanitize(name: string): string {
@@ -120,7 +135,7 @@ async function uploadResumable(folderId: string, filename: string, blob: Blob): 
   while (offset < total) {
     const end = Math.min(offset + CHUNK_SIZE, total)
     const chunk = blob.slice(offset, end)
-    const res = await fetch(uploadUrl, {
+    const res = await fetchWithRetry(uploadUrl, {
       method: 'PUT',
       headers: {
         'Content-Length': String(chunk.size),

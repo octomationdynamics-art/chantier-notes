@@ -14,7 +14,7 @@ export default defineConfig({
       manifest: {
         name: 'Chantier Notes',
         short_name: 'Chantier',
-        description: 'Dictée vocale et transcription pour notes de chantier, sync OneDrive.',
+        description: 'Dictée vocale et transcription pour notes de chantier, sync Google Drive.',
         theme_color: '#0b5394',
         background_color: '#0b5394',
         display: 'standalone',

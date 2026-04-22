@@ -152,9 +152,13 @@ export function useTranscription() {
         /* ignore */
       }
     }
-    const result = finalText
-    return result
-  }, [finalText])
+    const interimTrim = interimText.trim()
+    if (interimTrim && !finalText.includes(interimTrim)) {
+      const merged = finalText ? `${finalText} ${interimTrim}` : interimTrim
+      return merged
+    }
+    return finalText
+  }, [finalText, interimText])
 
   const reset = useCallback(() => {
     wantActiveRef.current = false
