@@ -30,11 +30,15 @@ function canSyncRemote(): boolean {
   return isConfigured() && getStoredUser() !== null && navigator.onLine
 }
 
+const MAX_PHOTO_RETRIES = 3
+
 export default function App() {
   const [notes, setNotes] = useState<Note[]>([])
   const [defaultChantier, setDefaultChantier] = useState('')
   const [syncing, setSyncing] = useState(false)
   const syncLockRef = useRef(false)
+  const deletedIdsRef = useRef<Set<string>>(new Set())
+  const photoAttemptsRef = useRef<Map<string, number>>(new Map())
 
   const reload = useCallback(async () => {
     const all = await listNotes()
@@ -46,8 +50,14 @@ export default function App() {
   }, [reload])
 
   const updateNoteLocal = useCallback(async (note: Note) => {
+    if (deletedIdsRef.current.has(note.id)) return
     await saveNote(note)
+    if (deletedIdsRef.current.has(note.id)) {
+      await deleteNote(note.id).catch(() => undefined)
+      return
+    }
     setNotes((prev) => {
+      if (deletedIdsRef.current.has(note.id)) return prev.filter((n) => n.id !== note.id)
       const idx = prev.findIndex((n) => n.id === note.id)
       if (idx === -1) return [note, ...prev]
       const copy = [...prev]
@@ -62,6 +72,9 @@ export default function App() {
       for (let i = 0; i < current.photos.length; i++) {
         const p = current.photos[i]
         if (p.syncState === 'synced') continue
+        const attempts = photoAttemptsRef.current.get(p.id) ?? 0
+        if (attempts >= MAX_PHOTO_RETRIES && p.syncState === 'error') continue
+        photoAttemptsRef.current.set(p.id, attempts + 1)
         const uploading: Photo = { ...p, syncState: 'uploading', syncError: undefined }
         current = { ...current, photos: current.photos.map((x, idx) => (idx === i ? uploading : x)) }
         await updateNoteLocal(current)
@@ -81,6 +94,7 @@ export default function App() {
             syncError: undefined,
           }
           current = { ...current, photos: current.photos.map((x, idx) => (idx === i ? synced : x)) }
+          photoAttemptsRef.current.delete(p.id)
         } catch (e) {
           const errored: Photo = {
             ...uploading,
@@ -99,14 +113,15 @@ export default function App() {
   const trySync = useCallback(
     async (noteId: string): Promise<void> => {
       if (!canSyncRemote()) return
+      if (deletedIdsRef.current.has(noteId)) return
       const snapshot = await listNotes().then((arr) => arr.find((x) => x.id === noteId))
       if (!snapshot) return
-      const alreadyCore = snapshot.syncState === 'synced'
+      const coreUploaded = Boolean(snapshot.driveAudioUrl && snapshot.driveTranscriptUrl)
       const uploading: Note = { ...snapshot, syncState: 'uploading', syncError: undefined }
       await updateNoteLocal(uploading)
       let current = uploading
       try {
-        if (!alreadyCore) {
+        if (!coreUploaded) {
           const result = await uploadNote({
             baseName: current.name,
             chantier: current.chantier,
@@ -150,9 +165,15 @@ export default function App() {
     try {
       const all = await listNotes()
       for (const n of all) {
-        const needsCore = n.syncState !== 'synced'
-        const needsPhotos = n.photos.some((p) => p.syncState !== 'synced')
-        if (needsCore || needsPhotos) {
+        if (deletedIdsRef.current.has(n.id)) continue
+        const coreUploaded = Boolean(n.driveAudioUrl && n.driveTranscriptUrl)
+        const needsCore = !coreUploaded
+        const pendingPhotos = n.photos.filter((p) => {
+          if (p.syncState === 'synced') return false
+          const attempts = photoAttemptsRef.current.get(p.id) ?? 0
+          return !(attempts >= MAX_PHOTO_RETRIES && p.syncState === 'error')
+        })
+        if (needsCore || pendingPhotos.length > 0) {
           await trySync(n.id)
         }
       }
@@ -324,10 +345,11 @@ export default function App() {
 
   const handleDelete = useCallback(
     async (id: string) => {
+      deletedIdsRef.current.add(id)
       const target = notes.find((n) => n.id === id)
       await deleteNote(id)
       setNotes((prev) => prev.filter((n) => n.id !== id))
-      if (target && target.syncState === 'synced' && canSyncRemote()) {
+      if (target && canSyncRemote() && (target.driveAudioUrl || target.driveTranscriptUrl)) {
         try {
           await deleteNoteFiles({
             baseName: target.name,
@@ -409,7 +431,7 @@ export default function App() {
         </section>
       </main>
       <footer className="app-footer">
-        <small>v0.3.0 · Whisper local + Drive + photos</small>
+        <small>v0.3.1 · Whisper local + Drive + photos</small>
         <div style={{ marginTop: 8 }}>
           <Diagnostic />
         </div>
