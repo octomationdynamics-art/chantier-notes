@@ -11,7 +11,7 @@ export interface UploadResult {
   webViewLink: string
 }
 
-async function fetchWithRetry(url: string, init: RequestInit, retries = 2): Promise<Response> {
+async function fetchWithRetry(url: string, init: RequestInit, retries = 3): Promise<Response> {
   let lastError: unknown = null
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
@@ -19,11 +19,23 @@ async function fetchWithRetry(url: string, init: RequestInit, retries = 2): Prom
     } catch (e) {
       lastError = e
       if (attempt === retries) break
-      await new Promise((r) => setTimeout(r, 800 * (attempt + 1)))
+      await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)))
     }
   }
   const msg = lastError instanceof Error ? lastError.message : String(lastError)
-  throw new Error(`Réseau: ${msg} (URL: ${new URL(url).hostname})`)
+  let endpoint = url
+  try {
+    const u = new URL(url)
+    endpoint = `${u.hostname}${u.pathname.replace(/\/files.*$/, '/files')}`
+  } catch {
+    /* keep raw */
+  }
+  throw new Error(`Réseau (${endpoint}): ${msg}`)
+}
+
+function cleanMime(type: string | undefined, fallback: string): string {
+  if (!type) return fallback
+  return type.split(';')[0].trim() || fallback
 }
 
 async function authed(url: string, init: RequestInit = {}): Promise<Response> {
@@ -116,11 +128,12 @@ async function uploadMultipart(
 }
 
 async function uploadResumable(folderId: string, filename: string, blob: Blob): Promise<UploadResult> {
+  const uploadContentType = cleanMime(blob.type, 'application/octet-stream')
   const initRes = await authed(`${UPLOAD}/files?uploadType=resumable&fields=id,webViewLink`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json; charset=UTF-8',
-      'X-Upload-Content-Type': blob.type || 'application/octet-stream',
+      'X-Upload-Content-Type': uploadContentType,
       'X-Upload-Content-Length': String(blob.size),
     },
     body: JSON.stringify({ name: filename, parents: [folderId] }),
@@ -164,13 +177,17 @@ async function uploadToFolder(
   data: Blob | string,
   contentType: string,
 ): Promise<UploadResult> {
+  const cleanType = cleanMime(contentType, 'application/octet-stream')
   if (typeof data !== 'string') {
     const existing = await findFileInFolder(folderId, filename)
     if (existing) await authed(`${DRIVE}/files/${existing.id}`, { method: 'DELETE' }).catch(() => undefined)
   }
-  const blob = typeof data === 'string' ? new Blob([data], { type: contentType }) : data
-  if (blob.size > 4 * 1024 * 1024) return uploadResumable(folderId, filename, blob)
-  return uploadMultipart(folderId, filename, data, contentType)
+  const blob =
+    typeof data === 'string'
+      ? new Blob([data], { type: cleanType })
+      : new Blob([data], { type: cleanType })
+  if (blob.size > 1 * 1024 * 1024) return uploadResumable(folderId, filename, blob)
+  return uploadMultipart(folderId, filename, blob, cleanType)
 }
 
 async function createShareLink(fileId: string): Promise<string> {
