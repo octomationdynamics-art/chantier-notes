@@ -10,7 +10,11 @@ export default defineConfig({
       includeAssets: ['favicon.svg', 'favicon.ico', 'apple-touch-icon-180x180.png'],
       workbox: {
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
-        navigateFallbackDenylist: [/^\/api\//, /googleapis\.com/, /accounts\.google\.com/],
+        globIgnores: [
+          '**/assets/ort-wasm*',
+          '**/assets/*transformers*',
+        ],
+        navigateFallbackDenylist: [/^\/api\//, /googleapis\.com/, /accounts\.google\.com/, /huggingface\.co/],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/(www|upload|content)\.googleapis\.com\/.*/i,
@@ -21,6 +25,24 @@ export default defineConfig({
             urlPattern: /^https:\/\/accounts\.google\.com\/.*/i,
             handler: 'NetworkOnly',
             options: { cacheName: 'no-cache-google-accounts' },
+          },
+          {
+            urlPattern: /^https:\/\/huggingface\.co\/.*\.(onnx|json|bin|txt)$/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'whisper-model',
+              expiration: { maxEntries: 30, maxAgeSeconds: 60 * 60 * 24 * 90 },
+              rangeRequests: true,
+            },
+          },
+          {
+            urlPattern: /^https:\/\/cdn-lfs(-[a-z0-9]+)?\.huggingface\.co\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'whisper-model-lfs',
+              expiration: { maxEntries: 30, maxAgeSeconds: 60 * 60 * 24 * 90 },
+              rangeRequests: true,
+            },
           },
         ],
       },

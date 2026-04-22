@@ -3,6 +3,7 @@ import type { Note, Photo } from '../types'
 import { ChantierPicker } from './ChantierPicker'
 import { TagChips } from './TagChips'
 import { PhotoStrip } from './PhotoStrip'
+import { TranscribeButton } from './TranscribeButton'
 
 function formatDate(ts: number): string {
   return new Date(ts).toLocaleString('fr-FR', {
@@ -32,6 +33,7 @@ interface Props {
   onChangeTags: (id: string, tags: string[]) => Promise<void>
   onAddPhotos: (id: string, files: File[]) => Promise<void>
   onDeletePhoto: (id: string, photoId: string) => Promise<void>
+  onSetTranscript: (id: string, transcript: string) => Promise<void>
 }
 
 export function NoteItem({
@@ -45,6 +47,7 @@ export function NoteItem({
   onChangeTags,
   onAddPhotos,
   onDeletePhoto,
+  onSetTranscript,
 }: Props) {
   const [editingName, setEditingName] = useState(false)
   const [name, setName] = useState(note.name)
@@ -149,6 +152,14 @@ export function NoteItem({
       {note.syncError && <p className="error">{note.syncError}</p>}
 
       <audio controls src={audioUrl} className="note-audio" preload="metadata" />
+
+      {!note.transcript.trim() && (
+        <TranscribeButton
+          audioBlob={note.audioBlob}
+          onDone={(text) => onSetTranscript(note.id, text)}
+          compact
+        />
+      )}
 
       <PhotoStrip photos={photoDisplay} onAdd={handleAddPhotos} onDelete={handleDeletePhoto} />
 

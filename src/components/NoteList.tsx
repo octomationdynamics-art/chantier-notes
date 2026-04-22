@@ -13,6 +13,7 @@ interface Props {
   onChangeTags: (id: string, tags: string[]) => Promise<void>
   onAddPhotos: (id: string, files: File[]) => Promise<void>
   onDeletePhoto: (id: string, photoId: string) => Promise<void>
+  onSetTranscript: (id: string, transcript: string) => Promise<void>
 }
 
 function matchesQuery(note: Note, q: string): boolean {
@@ -36,6 +37,7 @@ export function NoteList({
   onChangeTags,
   onAddPhotos,
   onDeletePhoto,
+  onSetTranscript,
 }: Props) {
   const [query, setQuery] = useState('')
   const [chantierFilter, setChantierFilter] = useState<string>('')
@@ -108,6 +110,7 @@ export function NoteList({
               onChangeTags={onChangeTags}
               onAddPhotos={onAddPhotos}
               onDeletePhoto={onDeletePhoto}
+              onSetTranscript={onSetTranscript}
             />
           ))}
         </div>

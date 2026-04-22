@@ -268,6 +268,22 @@ export default function App() {
     [],
   )
 
+  const handleSetTranscript = useCallback(
+    async (id: string, transcript: string) => {
+      const existing = await listNotes().then((arr) => arr.find((x) => x.id === id))
+      if (!existing) return
+      const updated: Note = {
+        ...existing,
+        transcript,
+        syncState: existing.syncState === 'synced' ? 'local' : existing.syncState,
+        driveTranscriptUrl: undefined,
+      }
+      await updateNoteLocal(updated)
+      if (canSyncRemote()) await trySync(id)
+    },
+    [updateNoteLocal, trySync],
+  )
+
   const handleAddPhotos = useCallback(
     async (id: string, files: File[]) => {
       const existing = await listNotes().then((arr) => arr.find((x) => x.id === id))
@@ -388,11 +404,12 @@ export default function App() {
             onChangeTags={handleChangeTags}
             onAddPhotos={handleAddPhotos}
             onDeletePhoto={handleDeletePhoto}
+            onSetTranscript={handleSetTranscript}
           />
         </section>
       </main>
       <footer className="app-footer">
-        <small>v0.2.4 · dictée + Google Drive + photos</small>
+        <small>v0.3.0 · Whisper local + Drive + photos</small>
         <div style={{ marginTop: 8 }}>
           <Diagnostic />
         </div>
