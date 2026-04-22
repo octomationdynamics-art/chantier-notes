@@ -157,7 +157,14 @@ export function RecorderPanel({
 
       {active && (
         <div className="transcript-live">
-          <h3>Transcription en direct</h3>
+          <div className="transcript-head">
+            <h3>Transcription en direct</h3>
+            {transcription.supported && (
+              <span className={`mic-indicator ${transcription.active ? 'on' : 'off'}`}>
+                {transcription.active ? '🎤 active' : '🔇 en pause'}
+              </span>
+            )}
+          </div>
           {transcription.supported ? (
             <p className="transcript-text">{liveText || <span className="muted">Parlez…</span>}</p>
           ) : (

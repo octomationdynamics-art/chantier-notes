@@ -391,7 +391,7 @@ export default function App() {
         </section>
       </main>
       <footer className="app-footer">
-        <small>v0.2.1 · dictée + Google Drive + photos</small>
+        <small>v0.2.2 · dictée + Google Drive + photos</small>
       </footer>
     </div>
   )

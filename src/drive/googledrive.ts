@@ -11,12 +11,24 @@ export interface UploadResult {
   webViewLink: string
 }
 
-async function fetchWithRetry(url: string, init: RequestInit, retries = 3): Promise<Response> {
+async function fetchWithRetry(url: string, init: RequestInit, retries = 4): Promise<Response> {
+  const timeoutMs = init.body ? 120_000 : 20_000
   let lastError: unknown = null
   for (let attempt = 0; attempt <= retries; attempt++) {
+    const controller = new AbortController()
+    const timer = window.setTimeout(() => controller.abort(new DOMException('Timeout', 'AbortError')), timeoutMs)
     try {
-      return await fetch(url, init)
+      const res = await fetch(url, { ...init, signal: controller.signal })
+      window.clearTimeout(timer)
+      if (res.status >= 500 || res.status === 429) {
+        if (attempt < retries) {
+          await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)))
+          continue
+        }
+      }
+      return res
     } catch (e) {
+      window.clearTimeout(timer)
       lastError = e
       if (attempt === retries) break
       await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)))

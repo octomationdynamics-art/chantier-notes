@@ -147,13 +147,36 @@
   border-radius: 12px;
   padding: 16px;
 }
+.transcript-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  gap: 8px;
+}
 .transcript-live h3 {
-  margin: 0 0 8px;
+  margin: 0;
   font-size: 13px;
   letter-spacing: 1px;
   text-transform: uppercase;
   color: var(--text-muted);
   font-weight: 600;
+}
+.mic-indicator {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+.mic-indicator.on {
+  color: #4ade80;
+  background: rgba(16, 185, 129, 0.15);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+.mic-indicator.off {
+  color: var(--warning);
+  background: rgba(245, 158, 11, 0.15);
 }
 .transcript-text {
   margin: 0;
