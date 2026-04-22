@@ -78,6 +78,16 @@
 .diag-icon { font-size: 14px; flex-shrink: 0; }
 .diag-name { font-weight: 600; color: var(--text); }
 .diag-detail { color: var(--text-muted); font-family: ui-monospace, Consolas, monospace; font-size: 11px; word-break: break-all; }
+.cleanup-report {
+  margin-top: 10px;
+  padding: 10px;
+  background: var(--bg-elev-2);
+  border-radius: 8px;
+  font-size: 12px;
+  font-family: ui-monospace, Consolas, monospace;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
 
 .login-bar {
   display: flex;

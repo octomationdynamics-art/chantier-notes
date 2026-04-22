@@ -39,6 +39,7 @@ export default function App() {
   const syncLockRef = useRef(false)
   const deletedIdsRef = useRef<Set<string>>(new Set())
   const photoAttemptsRef = useRef<Map<string, number>>(new Map())
+  const inflightSyncsRef = useRef<Map<string, Promise<void>>>(new Map())
 
   const reload = useCallback(async () => {
     const all = await listNotes()
@@ -112,47 +113,57 @@ export default function App() {
 
   const trySync = useCallback(
     async (noteId: string): Promise<void> => {
-      if (!canSyncRemote()) return
-      if (deletedIdsRef.current.has(noteId)) return
-      const snapshot = await listNotes().then((arr) => arr.find((x) => x.id === noteId))
-      if (!snapshot) return
-      const coreUploaded = Boolean(snapshot.driveAudioUrl && snapshot.driveTranscriptUrl)
-      const uploading: Note = { ...snapshot, syncState: 'uploading', syncError: undefined }
-      await updateNoteLocal(uploading)
-      let current = uploading
-      try {
-        if (!coreUploaded) {
-          const result = await uploadNote({
-            baseName: current.name,
-            chantier: current.chantier,
-            audioBlob: current.audioBlob,
-            transcript: current.transcript,
-          })
-          current = {
-            ...current,
-            driveFolderUrl: result.folderWebUrl,
-            driveAudioUrl: result.audioWebUrl,
-            driveTranscriptUrl: result.transcriptWebUrl,
-            driveShareUrl: result.shareUrl,
-            syncError: undefined,
+      const existing = inflightSyncsRef.current.get(noteId)
+      if (existing) return existing
+      const task = (async () => {
+        if (!canSyncRemote()) return
+        if (deletedIdsRef.current.has(noteId)) return
+        const snapshot = await listNotes().then((arr) => arr.find((x) => x.id === noteId))
+        if (!snapshot) return
+        const coreUploaded = Boolean(snapshot.driveAudioUrl && snapshot.driveTranscriptUrl)
+        const uploading: Note = { ...snapshot, syncState: 'uploading', syncError: undefined }
+        await updateNoteLocal(uploading)
+        let current = uploading
+        try {
+          if (!coreUploaded) {
+            const result = await uploadNote({
+              baseName: current.name,
+              chantier: current.chantier,
+              audioBlob: current.audioBlob,
+              transcript: current.transcript,
+            })
+            current = {
+              ...current,
+              driveFolderUrl: result.folderWebUrl,
+              driveAudioUrl: result.audioWebUrl,
+              driveTranscriptUrl: result.transcriptWebUrl,
+              driveShareUrl: result.shareUrl,
+              syncError: undefined,
+            }
+            await updateNoteLocal(current)
           }
-          await updateNoteLocal(current)
+          current = await uploadPendingPhotos(current)
+          const anyPhotoError = current.photos.some((p) => p.syncState === 'error')
+          const synced: Note = {
+            ...current,
+            syncState: anyPhotoError ? 'error' : 'synced',
+            syncError: anyPhotoError ? 'Certaines photos ont échoué' : undefined,
+          }
+          await updateNoteLocal(synced)
+        } catch (e) {
+          const errored: Note = {
+            ...current,
+            syncState: 'error',
+            syncError: e instanceof Error ? e.message : String(e),
+          }
+          await updateNoteLocal(errored)
         }
-        current = await uploadPendingPhotos(current)
-        const anyPhotoError = current.photos.some((p) => p.syncState === 'error')
-        const synced: Note = {
-          ...current,
-          syncState: anyPhotoError ? 'error' : 'synced',
-          syncError: anyPhotoError ? 'Certaines photos ont échoué' : undefined,
-        }
-        await updateNoteLocal(synced)
-      } catch (e) {
-        const errored: Note = {
-          ...current,
-          syncState: 'error',
-          syncError: e instanceof Error ? e.message : String(e),
-        }
-        await updateNoteLocal(errored)
+      })()
+      inflightSyncsRef.current.set(noteId, task)
+      try {
+        await task
+      } finally {
+        inflightSyncsRef.current.delete(noteId)
       }
     },
     [updateNoteLocal, uploadPendingPhotos],
@@ -452,7 +463,7 @@ export default function App() {
         </section>
       </main>
       <footer className="app-footer">
-        <small>v0.3.2 · Whisper local + Drive + photos</small>
+        <small>v0.3.3 · Whisper local + Drive + photos</small>
         <div style={{ marginTop: 8 }}>
           <Diagnostic />
         </div>

@@ -317,3 +317,84 @@ export async function deleteNoteFiles(params: {
 export async function deletePhotoFile(fileId: string): Promise<void> {
   await authed(`${DRIVE}/files/${fileId}`, { method: 'DELETE' }).catch(() => undefined)
 }
+
+export interface CleanupReport {
+  scanned: number
+  duplicatesDeleted: number
+  errors: string[]
+  folders: string[]
+}
+
+async function listAllFolderFiles(
+  folderId: string,
+): Promise<Array<{ id: string; name: string; modifiedTime: string; mimeType: string }>> {
+  const out: Array<{ id: string; name: string; modifiedTime: string; mimeType: string }> = []
+  let pageToken: string | undefined
+  do {
+    const q = encodeURIComponent(`'${folderId}' in parents and trashed=false`)
+    const url =
+      `${DRIVE}/files?q=${q}&fields=files(id,name,modifiedTime,mimeType),nextPageToken&pageSize=200` +
+      (pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : '')
+    const res = await authed(url)
+    if (!res.ok) throw new Error(`list folder ${res.status}: ${await res.text()}`)
+    const data = (await res.json()) as {
+      files: Array<{ id: string; name: string; modifiedTime: string; mimeType: string }>
+      nextPageToken?: string
+    }
+    out.push(...data.files)
+    pageToken = data.nextPageToken
+  } while (pageToken)
+  return out
+}
+
+export async function cleanupDuplicates(): Promise<CleanupReport> {
+  const report: CleanupReport = { scanned: 0, duplicatesDeleted: 0, errors: [], folders: [] }
+  const root = await findFolder(config.driveFolderName, undefined).catch(() => null)
+  if (!root) {
+    report.errors.push(`Dossier racine "${config.driveFolderName}" introuvable`)
+    return report
+  }
+
+  const rootContents = await listAllFolderFiles(root.id)
+  const subfolders = rootContents.filter((f) => f.mimeType === FOLDER_MIME)
+  const targets = [
+    { id: root.id, name: config.driveFolderName, files: rootContents.filter((f) => f.mimeType !== FOLDER_MIME) },
+  ]
+  for (const sub of subfolders) {
+    const files = await listAllFolderFiles(sub.id).catch((e) => {
+      report.errors.push(`${sub.name}: ${e instanceof Error ? e.message : String(e)}`)
+      return []
+    })
+    targets.push({ id: sub.id, name: sub.name, files: files.filter((f) => f.mimeType !== FOLDER_MIME) })
+  }
+
+  for (const t of targets) {
+    report.folders.push(t.name)
+    report.scanned += t.files.length
+    const byName = new Map<string, typeof t.files>()
+    for (const f of t.files) {
+      const arr = byName.get(f.name) ?? []
+      arr.push(f)
+      byName.set(f.name, arr)
+    }
+    for (const [name, group] of byName) {
+      if (group.length <= 1) continue
+      group.sort((a, b) => b.modifiedTime.localeCompare(a.modifiedTime))
+      const toDelete = group.slice(1)
+      for (const victim of toDelete) {
+        try {
+          const res = await authed(`${DRIVE}/files/${victim.id}`, { method: 'DELETE' })
+          if (res.ok || res.status === 404) {
+            report.duplicatesDeleted += 1
+          } else {
+            report.errors.push(`${name}: HTTP ${res.status}`)
+          }
+        } catch (e) {
+          report.errors.push(`${name}: ${e instanceof Error ? e.message : String(e)}`)
+        }
+      }
+    }
+  }
+
+  return report
+}

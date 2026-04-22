@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { getAccessToken, getStoredUser } from '../auth/google'
+import { cleanupDuplicates } from '../drive/googledrive'
 
 interface TestResult {
   name: string
@@ -99,6 +100,8 @@ export function Diagnostic() {
   const [open, setOpen] = useState(false)
   const [running, setRunning] = useState(false)
   const [results, setResults] = useState<TestResult[]>([])
+  const [cleanReport, setCleanReport] = useState<string | null>(null)
+  const [cleaning, setCleaning] = useState(false)
 
   async function handleRun() {
     setRunning(true)
@@ -116,6 +119,24 @@ export function Diagnostic() {
       .map((r) => `${r.status === 'ok' ? '✓' : '✗'} ${r.name}: ${r.detail}`)
       .join('\n')
     navigator.clipboard?.writeText(text)
+  }
+
+  async function handleCleanup() {
+    if (!window.confirm('Supprimer les doublons dans le dossier Chantier Notes de ton Drive ? (garde toujours la version la plus récente)')) return
+    setCleaning(true)
+    setCleanReport(null)
+    try {
+      const r = await cleanupDuplicates()
+      const folders = r.folders.length > 0 ? r.folders.join(', ') : '—'
+      const errs = r.errors.length > 0 ? `\nErreurs : ${r.errors.join(' | ')}` : ''
+      setCleanReport(
+        `Scanné ${r.scanned} fichier(s) dans ${r.folders.length} dossier(s) [${folders}] · Supprimé ${r.duplicatesDeleted} doublon(s).${errs}`,
+      )
+    } catch (e) {
+      setCleanReport(`Erreur : ${e instanceof Error ? e.message : String(e)}`)
+    } finally {
+      setCleaning(false)
+    }
   }
 
   if (!open) {
@@ -139,7 +160,11 @@ export function Diagnostic() {
         {results.length > 0 && (
           <button className="btn-ghost btn-small" onClick={copyResults}>📋 Copier</button>
         )}
+        <button className="btn-ghost btn-small" onClick={handleCleanup} disabled={cleaning}>
+          {cleaning ? 'Nettoyage…' : '🧹 Nettoyer doublons Drive'}
+        </button>
       </div>
+      {cleanReport && <div className="cleanup-report">{cleanReport}</div>}
       <ul className="diagnostic-list">
         {results.map((r, i) => (
           <li key={i} className={`diag-${r.status}`}>
