@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
-import type { AccountInfo } from '@azure/msal-browser'
-import { getActiveAccount, initializeMsal, signIn, signOut } from './msal'
+import { initGoogleAuth, signIn, signOut, type GoogleUser } from './google'
 import { isConfigured } from '../config'
 
 export function useAuth() {
-  const [account, setAccount] = useState<AccountInfo | null>(null)
+  const [user, setUser] = useState<GoogleUser | null>(null)
   const [ready, setReady] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -14,10 +13,10 @@ export function useAuth() {
       return
     }
     let cancelled = false
-    initializeMsal()
-      .then(() => {
+    initGoogleAuth()
+      .then((u) => {
         if (cancelled) return
-        setAccount(getActiveAccount())
+        setUser(u)
         setReady(true)
       })
       .catch((e) => {
@@ -33,8 +32,8 @@ export function useAuth() {
   const login = useCallback(async () => {
     setError(null)
     try {
-      const acc = await signIn()
-      setAccount(acc)
+      const u = await signIn()
+      setUser(u)
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
     }
@@ -44,7 +43,7 @@ export function useAuth() {
     setError(null)
     try {
       await signOut()
-      setAccount(null)
+      setUser(null)
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
     }
@@ -53,7 +52,7 @@ export function useAuth() {
   return {
     ready,
     isConfigured: isConfigured(),
-    account,
+    user,
     error,
     login,
     logout,

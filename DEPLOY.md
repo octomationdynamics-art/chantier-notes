@@ -1,63 +1,88 @@
-# Guide d'installation
+# Guide d'installation (Google Drive)
 
-Trois étapes : déployer, configurer Azure, installer sur mobile.
+## État actuel
 
-## 1. Déployer sur Vercel (≈ 3 min)
+- App déployée : **https://my-repository-notes-chantiers.vercel.app/**
+- Repo : https://github.com/octomationdynamics-art/chantier-notes
 
-### Option A — via l'interface web (recommandé, aucun CLI)
+Tant que la variable `VITE_GOOGLE_CLIENT_ID` n'est pas configurée, l'app fonctionne **en local** sur ton téléphone (enregistrement + transcription + stockage dans le navigateur), mais **rien n'est envoyé vers Google Drive**.
 
-1. Ouvrir **https://vercel.com/new** (créer un compte gratuit si besoin, peut utiliser ton compte GitHub).
-2. Cliquer sur **"Import Git Repository"** et sélectionner le repo `chantier-notes`.
-3. Framework preset : **Vite** (détecté auto).
-4. **Sans configurer** les variables d'environnement pour le moment, cliquer **"Deploy"**.
-5. Note ton URL de prod (ex : `https://chantier-notes-abc123.vercel.app`).
+## 1. Créer un Client ID Google OAuth (≈ 7 min, une seule fois)
 
-## 2. Créer l'app Azure (≈ 5 min)
+### 1.1 Créer un projet Google Cloud
 
-Tu vas enregistrer une app Microsoft pour que l'utilisateur (toi) puisse autoriser l'accès à ton OneDrive.
+1. Va sur **https://console.cloud.google.com/projectcreate**.
+2. Connecte-toi avec ton compte Google.
+3. Nom du projet : `Chantier Notes` → **Créer**.
+4. Attends que le projet soit créé (10 s), puis **sélectionne-le** en haut de l'écran.
 
-1. Aller sur **https://portal.azure.com** (se connecter avec `f.laine@empeering.fr`).
-2. Barre de recherche → **"App registrations"** → **"+ Nouvelle inscription"**.
-3. Remplir :
-   - **Nom** : `Chantier Notes`
-   - **Types de comptes pris en charge** : *"Comptes dans n'importe quel annuaire Microsoft Entra ID – multilocataire – et comptes Microsoft personnels"* (3ᵉ option).
-   - **URI de redirection** : type **"Application monopage (SPA)"**, valeur = `https://TON-URL-VERCEL.vercel.app` (celle notée à l'étape 1).
-4. Cliquer **"S'inscrire"**.
-5. Sur la page de l'app, copier **"ID d'application (client)"** → c'est ton `VITE_AZURE_CLIENT_ID`.
-6. Dans le menu gauche, **"Authentification"** → vérifier qu'il y a bien un URI de redirection de type **SPA** pointant vers ton URL Vercel. Ajouter aussi `http://localhost:5173` pour le dev local si besoin. **Enregistrer**.
-7. Dans le menu gauche, **"Autorisations d'API"** → **"+ Ajouter une autorisation"** → **"Microsoft Graph"** → **"Autorisations déléguées"** → cocher :
-   - `Files.ReadWrite`
-   - `User.Read`
-   - `offline_access`
-8. Cliquer **"Ajouter les autorisations"**. *(Pas besoin de consentement admin pour un compte perso/mono-user.)*
+### 1.2 Activer l'API Google Drive
 
-## 3. Brancher Azure au déploiement
+1. Va sur **https://console.cloud.google.com/apis/library/drive.googleapis.com**.
+2. Vérifie que le projet sélectionné est `Chantier Notes`.
+3. Clique sur **Activer**.
 
-1. Revenir dans Vercel → ton projet → **Settings** → **Environment Variables**.
-2. Ajouter :
-   - `VITE_AZURE_CLIENT_ID` = le client ID copié à l'étape 2.5
-   - `VITE_ONEDRIVE_FOLDER` = `Chantier Notes` *(ou autre nom)*
-3. Onglet **Deployments** → redéployer (bouton "..." sur le dernier deploy → **Redeploy**).
+### 1.3 Configurer l'écran de consentement OAuth
 
-## 4. Installer sur mobile
+1. Va sur **https://console.cloud.google.com/apis/credentials/consent**.
+2. Type d'utilisateur : **Externe** → **Créer**.
+3. Remplis les champs obligatoires :
+   - **Nom de l'application** : `Chantier Notes`
+   - **Adresse e-mail de support** : ton adresse Gmail
+   - **Adresse e-mail du développeur** : ton adresse Gmail
+4. Clique **Enregistrer et continuer** → **Enregistrer et continuer** (Scopes, pas besoin d'ajouter ici) → **Enregistrer et continuer** (Utilisateurs test : ajoute ton propre email).
+5. Bouton **Retour au tableau de bord**.
 
-Ouvrir l'URL Vercel dans le navigateur du téléphone :
+*(Tant que l'app est en mode "Testing", seuls les utilisateurs test que tu ajoutes peuvent se connecter. Pour toi seul, c'est parfait. Pas besoin de la publier.)*
 
-- **Android (Chrome)** : menu ⋮ → **"Installer l'application"** ou **"Ajouter à l'écran d'accueil"**.
-- **iOS (Safari)** : bouton Partager 📤 → **"Sur l'écran d'accueil"**.
+### 1.4 Créer le Client ID OAuth
 
-L'icône apparaît sur l'écran d'accueil, l'app s'ouvre en plein écran.
+1. Va sur **https://console.cloud.google.com/apis/credentials**.
+2. **+ Créer des identifiants** → **ID client OAuth**.
+3. Type d'application : **Application Web**.
+4. Nom : `Chantier Notes Web`.
+5. **Origines JavaScript autorisées** — clique **+ Ajouter un URI** et mets :
+   - `https://my-repository-notes-chantiers.vercel.app`
+   - `http://localhost:5173` *(pour dev local, optionnel)*
+6. **URI de redirection autorisés** : laisse vide *(pas utile avec le flow token)*.
+7. Clique **Créer**.
+8. Une popup s'affiche avec ton **ID client** → **copie-le** (finit par `.apps.googleusercontent.com`).
 
-## 5. Autoriser OneDrive
+## 2. Brancher le Client ID à Vercel
 
-1. Ouvrir l'app → bouton **"Se connecter"** en haut.
-2. Se connecter avec `f.laine@empeering.fr`.
-3. Accepter les autorisations demandées.
-4. Faire un premier enregistrement → il sera uploadé automatiquement dans `OneDrive > Chantier Notes`.
+1. Va sur **https://vercel.com/dashboard** → projet `my-repository-notes-chantiers`.
+2. **Settings** → **Environment Variables**.
+3. Ajoute :
+   - **Key** : `VITE_GOOGLE_CLIENT_ID`
+   - **Value** : l'ID client copié à l'étape 1.4
+   - **Environments** : cocher `Production`, `Preview`, `Development`
+4. Clique **Save**.
+5. Onglet **Deployments** → menu `...` du dernier deploy → **Redeploy** → *décocher "Use existing Build Cache"* si demandé → **Redeploy**.
+6. Attends ~1 min que le nouveau deploy soit live.
+
+## 3. Installer l'app sur mobile
+
+Ouvre https://my-repository-notes-chantiers.vercel.app/ dans :
+
+- **Android Chrome** : menu ⋮ → **Installer l'application** (ou *Ajouter à l'écran d'accueil*).
+- **iOS Safari** : bouton Partager 📤 → **Sur l'écran d'accueil**.
+
+L'icône apparaît sur l'écran d'accueil, l'app s'ouvre en plein écran sans barre d'URL.
+
+## 4. Premier usage
+
+1. Ouvre l'app → bouton **Se connecter**.
+2. Une popup Google s'ouvre → sélectionne ton compte Gmail.
+3. Accepte l'accès : l'app demande juste la permission **"Voir, modifier, créer et supprimer uniquement les fichiers Google Drive que vous utilisez avec cette app"** (scope `drive.file` = isolé, on ne voit jamais tes autres fichiers Drive).
+4. Fais un enregistrement → dès la fin, audio + texte sont uploadés dans un dossier **`Chantier Notes`** à la racine de ton Drive.
 
 ## Dépannage
 
-- **"Azure non configuré"** : `VITE_AZURE_CLIENT_ID` non défini dans Vercel ou redéploiement oublié.
-- **Popup bloqué à la connexion** : autoriser les popups pour le site, ou l'app basculera en mode redirect.
-- **Reconnaissance vocale ne marche pas** : n'est supportée que sur Chrome/Edge (Android) et Safari (iOS 14.5+). Sur Firefox, l'enregistrement audio fonctionne mais pas la transcription live.
-- **Erreur "AADSTS50011" (redirect URI mismatch)** : l'URI dans Azure ne correspond pas exactement à ton URL Vercel (attention aux `/` en fin).
+| Problème | Solution |
+|---|---|
+| "Google Drive non configuré" après deploy | `VITE_GOOGLE_CLIENT_ID` manquante ou build non refait (redéployer sans cache). |
+| "Error 400: redirect_uri_mismatch" | L'origine JS dans Google Cloud ne matche pas ton URL Vercel exactement. Vérifie qu'il y a bien `https://my-repository-notes-chantiers.vercel.app` **sans** slash final. |
+| "Access blocked: Chantier Notes has not completed Google verification" | En mode Testing, tu dois t'être ajouté comme *utilisateur test* (section 1.3 étape 4). |
+| Popup bloquée | Autorise les popups pour `my-repository-notes-chantiers.vercel.app` dans les paramètres du navigateur. |
+| Reconnaissance vocale silencieuse | Non supportée sur Firefox. Fonctionne sur Chrome/Edge (Android/desktop) et Safari iOS 14.5+. |
+| Token expiré au bout d'1 h | L'app refresh automatiquement au prochain upload ; si ça ne marche pas, déconnexion / reconnexion. |

@@ -1,12 +1,12 @@
 import { useAuth } from '../auth/useAuth'
 
 export function LoginBar() {
-  const { ready, isConfigured, account, login, logout, error } = useAuth()
+  const { ready, isConfigured, user, login, logout, error } = useAuth()
 
   if (!isConfigured) {
     return (
       <div className="login-bar warn">
-        <span>Azure non configuré — les notes resteront locales.</span>
+        <span>Google Drive non configuré — les notes resteront locales.</span>
       </div>
     )
   }
@@ -17,14 +17,14 @@ export function LoginBar() {
 
   return (
     <div className="login-bar">
-      {account ? (
+      {user ? (
         <>
-          <span className="login-email">{account.username}</span>
+          <span className="login-email" title={user.email}>{user.email}</span>
           <button className="btn-ghost" onClick={logout}>Déconnexion</button>
         </>
       ) : (
         <>
-          <span className="login-email muted">Non connecté à OneDrive</span>
+          <span className="login-email muted">Non connecté à Google Drive</span>
           <button className="btn-primary" onClick={login}>Se connecter</button>
         </>
       )}

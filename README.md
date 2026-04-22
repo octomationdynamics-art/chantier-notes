@@ -1,29 +1,30 @@
 # Chantier Notes
 
-PWA de dictée vocale avec transcription temps réel (Web Speech API, FR) et synchronisation OneDrive via Microsoft Graph.
+PWA de dictée vocale avec transcription en direct (Web Speech API, FR) et synchronisation **Google Drive**.
 
-Usage : relever des informations sur chantier à la voix, obtenir la transcription texte, sauvegarde audio + texte dans OneDrive.
+Usage : relever des informations sur chantier à la voix, avoir la transcription texte, sauvegarde audio + texte dans Google Drive.
 
 ## Fonctionnalités MVP
 
 - Enregistrement audio avec **pause/reprise**
 - **Transcription en direct** (Web Speech API, gratuit)
 - **Stockage local** hors-ligne (IndexedDB), resté accessible sans réseau
-- **Upload OneDrive** (audio + texte) dans un dossier `Chantier Notes`
+- **Upload Google Drive** (audio + texte) dans un dossier `Chantier Notes`
 - **Renommer / supprimer** les notes
-- **Liens OneDrive** directs (audio, texte, dossier, lien de partage)
+- **Liens Drive** directs (audio, texte, dossier, lien de partage anonyme)
 - Installable comme app (PWA)
+- Scope Drive minimal : `drive.file` — l'app ne peut voir que les fichiers qu'elle crée, jamais le reste de ton Drive
 
 ## Dév local
 
 ```bash
-npm install --legacy-peer-deps
+npm install
 cp .env.example .env.local
-# éditer .env.local avec VITE_AZURE_CLIENT_ID (voir DEPLOY.md)
+# éditer .env.local avec VITE_GOOGLE_CLIENT_ID (voir DEPLOY.md)
 npm run dev
 ```
 
-Sans `VITE_AZURE_CLIENT_ID`, l'app fonctionne en local (enregistrement + transcription) mais sans sync OneDrive.
+Sans `VITE_GOOGLE_CLIENT_ID`, l'app fonctionne en local (enregistrement + transcription) mais sans sync Drive.
 
 ## Build production
 
@@ -34,16 +35,23 @@ npm run preview
 
 ## Déploiement
 
-Voir [DEPLOY.md](./DEPLOY.md) pour :
-1. Créer l'app Azure (OAuth OneDrive)
-2. Déployer sur Vercel
-3. Installer la PWA sur mobile
+App déployée : https://my-repository-notes-chantiers.vercel.app/
+
+Configuration Google Cloud + installation mobile : voir **[DEPLOY.md](./DEPLOY.md)**.
 
 ## Variables d'environnement
 
 | Variable | Défaut | Description |
 |---|---|---|
-| `VITE_AZURE_CLIENT_ID` | — | Client ID de l'app Azure (obligatoire pour OneDrive) |
-| `VITE_AZURE_AUTHORITY` | `https://login.microsoftonline.com/common` | Tenant MS (common = multi-tenant) |
-| `VITE_ONEDRIVE_FOLDER` | `Chantier Notes` | Nom du dossier racine dans OneDrive |
+| `VITE_GOOGLE_CLIENT_ID` | — | Client ID OAuth Google (obligatoire pour Drive) |
+| `VITE_DRIVE_FOLDER` | `Chantier Notes` | Nom du dossier dans Drive |
 | `VITE_SPEECH_LANG` | `fr-FR` | Langue de reconnaissance vocale |
+
+## Stack
+
+- Vite + React 19 + TypeScript
+- `vite-plugin-pwa` (service worker, installable)
+- Google Identity Services (OAuth token flow, sans backend)
+- Google Drive REST API v3
+- IndexedDB (idb) pour le stockage hors-ligne
+- Web Speech API (reconnaissance vocale navigateur)

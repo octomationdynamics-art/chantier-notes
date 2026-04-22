@@ -10,8 +10,8 @@ export interface Note {
   transcript: string
   syncState: SyncState
   syncError?: string
-  oneDriveAudioUrl?: string
-  oneDriveTranscriptUrl?: string
-  oneDriveFolderUrl?: string
-  oneDriveShareUrl?: string
+  driveAudioUrl?: string
+  driveTranscriptUrl?: string
+  driveFolderUrl?: string
+  driveShareUrl?: string
 }

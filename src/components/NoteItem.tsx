@@ -61,7 +61,7 @@ export function NoteItem({ note, onRename, onDelete, onSync }: Props) {
   const statusLabel: Record<typeof note.syncState, string> = {
     local: 'Local',
     uploading: 'Envoi…',
-    synced: 'Sur OneDrive',
+    synced: 'Sur Drive',
     error: 'Erreur',
   }
 
@@ -108,28 +108,28 @@ export function NoteItem({ note, onRename, onDelete, onSync }: Props) {
         </button>
         {note.syncState !== 'uploading' && (
           <button className="btn-ghost" onClick={() => onSync(note.id)}>
-            {note.syncState === 'synced' ? 'Renvoyer' : 'Envoyer vers OneDrive'}
+            {note.syncState === 'synced' ? 'Renvoyer' : 'Envoyer vers Drive'}
           </button>
         )}
-        {note.oneDriveAudioUrl && (
-          <a className="btn-link" href={note.oneDriveAudioUrl} target="_blank" rel="noreferrer">
+        {note.driveAudioUrl && (
+          <a className="btn-link" href={note.driveAudioUrl} target="_blank" rel="noreferrer">
             🔊 Audio
           </a>
         )}
-        {note.oneDriveTranscriptUrl && (
-          <a className="btn-link" href={note.oneDriveTranscriptUrl} target="_blank" rel="noreferrer">
+        {note.driveTranscriptUrl && (
+          <a className="btn-link" href={note.driveTranscriptUrl} target="_blank" rel="noreferrer">
             📝 Texte
           </a>
         )}
-        {note.oneDriveFolderUrl && (
-          <a className="btn-link" href={note.oneDriveFolderUrl} target="_blank" rel="noreferrer">
+        {note.driveFolderUrl && (
+          <a className="btn-link" href={note.driveFolderUrl} target="_blank" rel="noreferrer">
             📁 Dossier
           </a>
         )}
-        {note.oneDriveShareUrl && (
+        {note.driveShareUrl && (
           <button
             className="btn-ghost"
-            onClick={() => navigator.clipboard?.writeText(note.oneDriveShareUrl ?? '')}
+            onClick={() => navigator.clipboard?.writeText(note.driveShareUrl ?? '')}
           >
             🔗 Copier lien partage
           </button>

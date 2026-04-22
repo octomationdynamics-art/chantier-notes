@@ -3,8 +3,8 @@ import { LoginBar } from './components/LoginBar'
 import { RecorderPanel } from './components/RecorderPanel'
 import { NoteList } from './components/NoteList'
 import { deleteNote, listNotes, saveNote, updateNote } from './db/notes'
-import { deleteNoteFiles, uploadNote } from './graph/onedrive'
-import { getActiveAccount } from './auth/msal'
+import { deleteNoteFiles, uploadNote } from './drive/googledrive'
+import { getStoredUser } from './auth/google'
 import type { Note } from './types'
 import { isConfigured } from './config'
 import './App.css'
@@ -32,7 +32,7 @@ export default function App() {
   }, [reload])
 
   const trySync = useCallback(async (note: Note): Promise<Note> => {
-    if (!isConfigured() || !getActiveAccount()) return note
+    if (!isConfigured() || !getStoredUser()) return note
     const uploading: Note = { ...note, syncState: 'uploading', syncError: undefined }
     await saveNote(uploading)
     setNotes((prev) => prev.map((n) => (n.id === note.id ? uploading : n)))
@@ -45,10 +45,10 @@ export default function App() {
       const synced: Note = {
         ...uploading,
         syncState: 'synced',
-        oneDriveFolderUrl: result.folderWebUrl,
-        oneDriveAudioUrl: result.audioWebUrl,
-        oneDriveTranscriptUrl: result.transcriptWebUrl,
-        oneDriveShareUrl: result.shareUrl,
+        driveFolderUrl: result.folderWebUrl,
+        driveAudioUrl: result.audioWebUrl,
+        driveTranscriptUrl: result.transcriptWebUrl,
+        driveShareUrl: result.shareUrl,
         syncError: undefined,
       }
       await saveNote(synced)
@@ -103,7 +103,7 @@ export default function App() {
     const target = notes.find((n) => n.id === id)
     await deleteNote(id)
     setNotes((prev) => prev.filter((n) => n.id !== id))
-    if (target && target.syncState === 'synced' && isConfigured() && getActiveAccount()) {
+    if (target && target.syncState === 'synced' && isConfigured() && getStoredUser()) {
       try {
         await deleteNoteFiles(target.name)
       } catch {
@@ -139,7 +139,7 @@ export default function App() {
         </section>
       </main>
       <footer className="app-footer">
-        <small>v0.1 · dictée + OneDrive</small>
+        <small>v0.1 · dictée + Google Drive</small>
       </footer>
     </div>
   )
