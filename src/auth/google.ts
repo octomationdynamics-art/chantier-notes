@@ -1,7 +1,8 @@
 import { config } from '../config'
 
 const GSI_SRC = 'https://accounts.google.com/gsi/client'
-export const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file'
+export const DRIVE_SCOPE =
+  'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile'
 const TOKEN_STORAGE_KEY = 'chantier-notes.google.token'
 const USER_STORAGE_KEY = 'chantier-notes.google.user'
 
