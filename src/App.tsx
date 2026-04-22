@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { LoginBar } from './components/LoginBar'
 import { RecorderPanel } from './components/RecorderPanel'
 import { NoteList } from './components/NoteList'
+import { Diagnostic } from './components/Diagnostic'
 import { deleteNote, listNotes, saveNote, updateNote } from './db/notes'
 import {
   deleteNoteFiles,
@@ -391,7 +392,10 @@ export default function App() {
         </section>
       </main>
       <footer className="app-footer">
-        <small>v0.2.3 · dictée + Google Drive + photos</small>
+        <small>v0.2.4 · dictée + Google Drive + photos</small>
+        <div style={{ marginTop: 8 }}>
+          <Diagnostic />
+        </div>
       </footer>
     </div>
   )

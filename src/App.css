@@ -36,6 +36,49 @@
   color: var(--text-muted);
 }
 
+.diagnostic {
+  margin: 12px auto;
+  max-width: 560px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  text-align: left;
+}
+.diagnostic-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.diagnostic-actions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.diagnostic-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.diagnostic-list li {
+  display: flex;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: var(--bg-elev-2);
+  font-size: 12px;
+}
+.diagnostic-list li.diag-ok { border-left: 3px solid var(--success); }
+.diagnostic-list li.diag-fail { border-left: 3px solid var(--danger); color: #fca5a5; }
+.diag-icon { font-size: 14px; flex-shrink: 0; }
+.diag-name { font-weight: 600; color: var(--text); }
+.diag-detail { color: var(--text-muted); font-family: ui-monospace, Consolas, monospace; font-size: 11px; word-break: break-all; }
+
 .login-bar {
   display: flex;
   align-items: center;
