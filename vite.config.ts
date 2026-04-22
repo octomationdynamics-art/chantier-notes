@@ -10,6 +10,19 @@ export default defineConfig({
       includeAssets: ['favicon.svg', 'favicon.ico', 'apple-touch-icon-180x180.png'],
       workbox: {
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+        navigateFallbackDenylist: [/^\/api\//, /googleapis\.com/, /accounts\.google\.com/],
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/(www|upload|content)\.googleapis\.com\/.*/i,
+            handler: 'NetworkOnly',
+            options: { cacheName: 'no-cache-googleapis' },
+          },
+          {
+            urlPattern: /^https:\/\/accounts\.google\.com\/.*/i,
+            handler: 'NetworkOnly',
+            options: { cacheName: 'no-cache-google-accounts' },
+          },
+        ],
       },
       manifest: {
         name: 'Chantier Notes',

@@ -34,6 +34,7 @@ async function fetchWithRetry(url: string, init: RequestInit, retries = 4): Prom
       await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)))
     }
   }
+  const errName = lastError instanceof Error ? lastError.name : 'Error'
   const msg = lastError instanceof Error ? lastError.message : String(lastError)
   let endpoint = url
   try {
@@ -42,7 +43,7 @@ async function fetchWithRetry(url: string, init: RequestInit, retries = 4): Prom
   } catch {
     /* keep raw */
   }
-  throw new Error(`Réseau (${endpoint}): ${msg}`)
+  throw new Error(`Réseau [${errName}] (${endpoint}): ${msg}`)
 }
 
 function cleanMime(type: string | undefined, fallback: string): string {
